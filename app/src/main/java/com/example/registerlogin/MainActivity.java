@@ -2,6 +2,7 @@ package com.example.registerlogin;
 
 import android.content.Intent;
 import android.os.Bundle;
+import android.util.Base64;
 import android.util.Log;
 import android.view.View;
 import android.widget.Button;
@@ -19,24 +20,32 @@ import com.example.registerlogin.R;
 import com.example.registerlogin.SignatureActivity;
 import com.example.registerlogin.VerifyRequest;
 
+import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.io.IOException;
+import java.security.InvalidKeyException;
+import java.security.KeyManagementException;
 import java.security.KeyStore;
 import java.security.KeyStoreException;
 import java.security.NoSuchAlgorithmException;
 import java.security.PrivateKey;
+import java.security.PublicKey;
+import java.security.Signature;
+import java.security.SignatureException;
 import java.security.UnrecoverableEntryException;
 import java.security.cert.CertificateException;
 
 public class MainActivity extends AppCompatActivity {
+
     private TextView tv_id;
     private Button btn_info;
     private Button btn_buy;
-    private static final String KEY_NAME = "my_key";
+    //private static final String KEY_NAME = userID;
     private KeyStore keyStore;
     private PrivateKey privateKey;
+    private PublicKey publicKey;
     private static final String TAG = MainActivity.class.getSimpleName();
 
     @Override
@@ -77,8 +86,10 @@ public class MainActivity extends AppCompatActivity {
 
                                 keyStore = KeyStore.getInstance("AndroidKeyStore");
                                 keyStore.load(null);
+                                Intent intent = getIntent();
+                                String userID = intent.getStringExtra("userID");
 
-                                boolean hasAccess = checkPrivateKeyAccess(KEY_NAME);
+                                boolean hasAccess = checkPrivateKeyAccess(userID);
                                 if (hasAccess) {
                                     // 개인 키에 액세스할 수 있는 권한이 있음
                                     Log.d(TAG, "개인 키에 액세스할 수 있는 권한이 있음");
@@ -87,7 +98,7 @@ public class MainActivity extends AppCompatActivity {
                                     Log.d(TAG, "개인 키에 액세스할 수 있는 권한이 없음");
                                 }
 
-                                if (keyStore.containsAlias(KEY_NAME)) {
+                                if (keyStore.containsAlias(userID)) {
                                     // 키 쌍이 존재함
                                     // 공개 키와 개인 키 출력
                                     Log.d(TAG, "키스토어 저장됨");
@@ -96,7 +107,7 @@ public class MainActivity extends AppCompatActivity {
                                     Log.d(TAG, "Key pair not found");
                                 }
 
-                                KeyStore.Entry entry = keyStore.getEntry(KEY_NAME, null);
+                                KeyStore.Entry entry = keyStore.getEntry(userID, null);
 
                                 if (entry instanceof KeyStore.PrivateKeyEntry) {
                                     // 개인키가 초기화되었으므로 접근 가능
@@ -106,23 +117,27 @@ public class MainActivity extends AppCompatActivity {
                                     Log.d(TAG, "개인키 초기화 안됨");
                                 }
 
-                                KeyStore.PrivateKeyEntry privateKeyEntry = (KeyStore.PrivateKeyEntry) keyStore.getEntry(KEY_NAME, null);
+                                KeyStore.PrivateKeyEntry privateKeyEntry = (KeyStore.PrivateKeyEntry) keyStore.getEntry(userID, null);
                                 privateKey = privateKeyEntry.getPrivateKey();
 
                                 SignatureActivity signatureActivity = new SignatureActivity();
-                                String signedChallenge = signatureActivity.signChallenge(challenge, privateKey);
+                                byte[] signedChallenge = signatureActivity.signChallenge(challenge, privateKey);
 
                                 if (signedChallenge != null) {
                                     // Method invocation was successful
-                                    Log.d(TAG, "Signed Challenge: " + signedChallenge);
+                                    Log.d(TAG, "Signed Challenge: " + Base64.encodeToString(signedChallenge, Base64.DEFAULT));
                                 } else {
                                     // Method invocation failed
                                     Log.e(TAG, "Failed to sign the challenge");
                                 }
-                                Toast.makeText(getApplicationContext(), "signed된 메시지2: " + signedChallenge, Toast.LENGTH_SHORT).show();
+                                //Toast.makeText(getApplicationContext(), "signed된 메시지2: " + Base64.encodeToString(signedChallenge, Base64.DEFAULT), Toast.LENGTH_SHORT).show();
+
+                                //Intent intent = getIntent();
+                                //String userID = intent.getStringExtra("userID");
+                                verifySignature(signedChallenge, challenge, userID); // userID에 실제 사용자의 ID를 전달해야 함
 
 
-                                verifySignature(signedChallenge, "userID"); // userID에 실제 사용자의 ID를 전달해야 함
+
                             } else {
                                 Log.e(TAG, "Challenge key not found in JSON response");
                             }
@@ -131,6 +146,8 @@ public class MainActivity extends AppCompatActivity {
                             throw new RuntimeException(e);
                         } catch (CertificateException | KeyStoreException | IOException |
                                  NoSuchAlgorithmException | UnrecoverableEntryException e) {
+                            throw new RuntimeException(e);
+                        } catch (KeyManagementException e) {
                             throw new RuntimeException(e);
                         }
                     }
@@ -158,21 +175,34 @@ public class MainActivity extends AppCompatActivity {
         return false;
     }
 
-    private void verifySignature(String signString, String userID) {
+    private void verifySignature(byte[] signString, String chall, String userID) throws KeyStoreException, CertificateException, IOException, NoSuchAlgorithmException, UnrecoverableEntryException, KeyManagementException {
+        KeyStore keyStore = KeyStore.getInstance("AndroidKeyStore");
+        keyStore.load(null);
+        KeyStore.PrivateKeyEntry privateKeyEntry = (KeyStore.PrivateKeyEntry) keyStore.getEntry(userID, null);
+        publicKey = privateKeyEntry.getCertificate().getPublicKey();
+        String stringpublicKey = Base64.encodeToString(publicKey.getEncoded(), Base64.DEFAULT);
+
         Response.Listener<String> responseListener = new Response.Listener<String>() {
             @Override
             public void onResponse(String response) {
                 try {
                     JSONObject jsonObject = new JSONObject(response);
                     boolean success = jsonObject.getBoolean("success");
-                    String message = jsonObject.getString("message");
+                    boolean isvalid = jsonObject.getBoolean("isValidPublicKey");
+
+                    if (isvalid){
+                        Toast.makeText(getApplicationContext(), "공개키 유효.", Toast.LENGTH_SHORT).show();
+                    }else{
+                        Toast.makeText(getApplicationContext(), "공개키 XX.", Toast.LENGTH_SHORT).show();
+
+                    }
 
                     if (success) {
                         // 검증 성공
                         Toast.makeText(getApplicationContext(), "서명이 확인되었습니다.", Toast.LENGTH_SHORT).show();
                     } else {
                         // 검증 실패
-                        Toast.makeText(getApplicationContext(), "서명이 유효하지 않습니다. " + message, Toast.LENGTH_SHORT).show();
+                        Toast.makeText(getApplicationContext(), "서명이 유효하지 않습니다. ", Toast.LENGTH_SHORT).show();
                     }
                 } catch (JSONException e) {
                     e.printStackTrace();
@@ -181,9 +211,10 @@ public class MainActivity extends AppCompatActivity {
             }
         };
 
-        VerifyRequest verifyRequest = new VerifyRequest(signString, userID, responseListener);
+        VerifyRequest verifyRequest = new VerifyRequest(userID, chall,Base64.encodeToString(signString, Base64.DEFAULT),stringpublicKey, responseListener, MainActivity.this);
         RequestQueue queue = Volley.newRequestQueue(this);
         queue.add(verifyRequest);
     }
 
 }
+

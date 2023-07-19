@@ -17,6 +17,12 @@ import com.android.volley.toolbox.Volley;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import java.io.IOException;
+import java.security.KeyManagementException;
+import java.security.KeyStoreException;
+import java.security.NoSuchAlgorithmException;
+import java.security.cert.CertificateException;
+
 public class RegisterActivity extends AppCompatActivity {
 
     private EditText et_id, et_pass, et_name, et_age;
@@ -65,7 +71,13 @@ public class RegisterActivity extends AppCompatActivity {
                     }
                 };
                 //서버로 Volley를 이용하여 요청
-                RegisterRequest registerRequest = new RegisterRequest(userID, userPass,userName, userAge, responseListner);
+                RegisterRequest registerRequest = null;
+                try {
+                    registerRequest = new RegisterRequest(userID, userPass,userName, userAge, responseListner, RegisterActivity.this);
+                } catch (CertificateException | IOException | KeyStoreException |
+                         NoSuchAlgorithmException | KeyManagementException e) {
+                    throw new RuntimeException(e);
+                }
                 RequestQueue queue = Volley.newRequestQueue(RegisterActivity.this);
                 queue.add(registerRequest);
 

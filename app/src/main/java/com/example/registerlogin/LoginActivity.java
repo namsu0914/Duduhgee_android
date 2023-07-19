@@ -16,6 +16,12 @@ import com.android.volley.toolbox.Volley;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import java.io.IOException;
+import java.security.KeyManagementException;
+import java.security.KeyStoreException;
+import java.security.NoSuchAlgorithmException;
+import java.security.cert.CertificateException;
+
 public class LoginActivity extends AppCompatActivity {
     private EditText et_id, et_pass;
     private Button btn_login, btn_register;
@@ -69,7 +75,20 @@ public class LoginActivity extends AppCompatActivity {
                     }
                 };
                 //로그인 처리
-                LoginRequest loginRequest = new LoginRequest(userID, userPass, responseListner);
+                LoginRequest loginRequest = null;
+                try {
+                    loginRequest = new LoginRequest(userID, userPass, responseListner, LoginActivity.this);
+                } catch (CertificateException e) {
+                    throw new RuntimeException(e);
+                } catch (IOException e) {
+                    throw new RuntimeException(e);
+                } catch (KeyStoreException e) {
+                    throw new RuntimeException(e);
+                } catch (NoSuchAlgorithmException e) {
+                    throw new RuntimeException(e);
+                } catch (KeyManagementException e) {
+                    throw new RuntimeException(e);
+                }
                 RequestQueue queue = Volley.newRequestQueue(LoginActivity.this);
                 queue.add(loginRequest);
             }

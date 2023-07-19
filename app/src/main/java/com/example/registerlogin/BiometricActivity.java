@@ -32,6 +32,7 @@ import org.json.JSONObject;
 
 import java.io.IOException;
 import java.security.InvalidAlgorithmParameterException;
+import java.security.KeyManagementException;
 import java.security.KeyPair;
 import java.security.KeyPairGenerator;
 import java.security.KeyStore;
@@ -49,7 +50,7 @@ public class BiometricActivity extends AppCompatActivity {
     private BiometricPrompt.AuthenticationCallback authenticationCallback;
     private Button start_authentication;
 
-    private static final String KEY_NAME = "my_key";
+    //private static final String KEY_NAME = "my_key";
     private KeyStore keyStore;
     private PublicKey publicKey;
     private static final String TAG = "BiometricActivity";
@@ -82,7 +83,19 @@ public class BiometricActivity extends AppCompatActivity {
                 // 키 쌍 생성 확인 코드 추가
                 checkKeyPairExistence();
                 // 공개키를 서버로 전송
-                sendPublicKeyToServer(publicKey);
+                try {
+                    sendPublicKeyToServer(publicKey);
+                } catch (CertificateException e) {
+                    throw new RuntimeException(e);
+                } catch (IOException e) {
+                    throw new RuntimeException(e);
+                } catch (KeyStoreException e) {
+                    throw new RuntimeException(e);
+                } catch (NoSuchAlgorithmException e) {
+                    throw new RuntimeException(e);
+                } catch (KeyManagementException e) {
+                    throw new RuntimeException(e);
+                }
             }
 
         };
@@ -114,13 +127,15 @@ public class BiometricActivity extends AppCompatActivity {
     }
 
     private void checkKeyPairExistence() {
+        Intent intent = getIntent();
+        String userID = intent.getStringExtra("userID");
         try {
             keyStore = KeyStore.getInstance("AndroidKeyStore");
             keyStore.load(null);
 
-            if (keyStore.containsAlias(KEY_NAME)) {
+            if (keyStore.containsAlias(userID)) {
                 // 키 쌍이 존재함
-                KeyStore.PrivateKeyEntry privateKeyEntry = (KeyStore.PrivateKeyEntry) keyStore.getEntry(KEY_NAME, null);
+                KeyStore.PrivateKeyEntry privateKeyEntry = (KeyStore.PrivateKeyEntry) keyStore.getEntry(userID, null);
                 publicKey = privateKeyEntry.getCertificate().getPublicKey();
                 // 공개 키와 개인 키 출력
                 Log.d(TAG, "Public Key: " + Base64.encodeToString(publicKey.getEncoded(), Base64.DEFAULT));
@@ -137,13 +152,15 @@ public class BiometricActivity extends AppCompatActivity {
     }
 
     private void generateKeyPair() {
+        Intent intent = getIntent();
+        String userID = intent.getStringExtra("userID");
         try {
             keyStore = KeyStore.getInstance("AndroidKeyStore");
             keyStore.load(null);
 
-            if (!keyStore.containsAlias(KEY_NAME)) {
+            if (!keyStore.containsAlias(userID)) {
                 KeyPairGenerator keyPairGenerator = KeyPairGenerator.getInstance(KeyProperties.KEY_ALGORITHM_RSA, "AndroidKeyStore");
-                keyPairGenerator.initialize(new KeyGenParameterSpec.Builder(KEY_NAME, KeyProperties.PURPOSE_SIGN)
+                keyPairGenerator.initialize(new KeyGenParameterSpec.Builder(userID, KeyProperties.PURPOSE_SIGN)
                         .setDigests(KeyProperties.DIGEST_SHA256)
                         .setSignaturePaddings(KeyProperties.SIGNATURE_PADDING_RSA_PKCS1)
                         .build());
@@ -151,7 +168,7 @@ public class BiometricActivity extends AppCompatActivity {
                 KeyPair keyPair = keyPairGenerator.generateKeyPair();
                 publicKey = keyPair.getPublic();
 
-                KeyStore.PrivateKeyEntry privateKeyEntry = (KeyStore.PrivateKeyEntry) keyStore.getEntry(KEY_NAME, null);
+                KeyStore.PrivateKeyEntry privateKeyEntry = (KeyStore.PrivateKeyEntry) keyStore.getEntry(userID, null);
                 PrivateKey privateKey = privateKeyEntry.getPrivateKey();
 //                PrivateKey privateKey = keyPair.getPrivate();
 
@@ -162,7 +179,7 @@ public class BiometricActivity extends AppCompatActivity {
                 Log.d(TAG, "비밀키: " + Base64.encodeToString(privateKey.getEncoded(), Base64.DEFAULT));
             } else {
                 // 키 쌍이 이미 존재함
-                KeyStore.PrivateKeyEntry privateKeyEntry = (KeyStore.PrivateKeyEntry) keyStore.getEntry(KEY_NAME, null);
+                KeyStore.PrivateKeyEntry privateKeyEntry = (KeyStore.PrivateKeyEntry) keyStore.getEntry(userID, null);
                 publicKey = privateKeyEntry.getCertificate().getPublicKey();
                 // 공개 키와 개인 키 출력
                 Log.d(TAG, "Public Key: " + Base64.encodeToString(publicKey.getEncoded(), Base64.DEFAULT));
@@ -171,10 +188,12 @@ public class BiometricActivity extends AppCompatActivity {
         } catch (NoSuchAlgorithmException | NoSuchProviderException | InvalidAlgorithmParameterException | KeyStoreException | CertificateException | IOException | UnrecoverableEntryException e) {
             e.printStackTrace();
             Toast.makeText(getApplicationContext(), "키 생성 오류: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+        } catch (KeyManagementException e) {
+            throw new RuntimeException(e);
         }
     }
 
-    private void sendPublicKeyToServer(PublicKey publicKey) {
+    private void sendPublicKeyToServer(PublicKey publicKey) throws CertificateException, IOException, KeyStoreException, NoSuchAlgorithmException, KeyManagementException {
         Intent intent = getIntent();
         String userID = intent.getStringExtra("userID");
 
@@ -204,7 +223,7 @@ public class BiometricActivity extends AppCompatActivity {
             }
         };
 
-        SavePKRequest savePKRequest = new SavePKRequest(publicKeyString, userID, responseListener, errorListener);
+        SavePKRequest savePKRequest = new SavePKRequest(publicKeyString, userID, responseListener, errorListener, BiometricActivity.this);
         RequestQueue queue = Volley.newRequestQueue(this);
         queue.add(savePKRequest);
     }

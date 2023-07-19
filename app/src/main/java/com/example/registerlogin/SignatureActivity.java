@@ -52,9 +52,9 @@ import java.security.SignatureException;
 
 public class SignatureActivity extends AppCompatActivity {
     private static final String TAG = "SignatureActivity";
-    private static final String KEY_NAME = "my_key";
+    //private static final String KEY_NAME = "my_key";
 
-    public String signChallenge(String challenge, PrivateKey privateKey) {
+    public byte[] signChallenge(String challenge, PrivateKey privateKey) {
         try {
             Signature signature = Signature.getInstance("SHA256withRSA");
             signature.initSign(privateKey);
@@ -62,13 +62,7 @@ public class SignatureActivity extends AppCompatActivity {
             byte[] encodedSignature = signature.sign();
             String signedChallenge = Base64.encodeToString(encodedSignature, Base64.DEFAULT);
 
-            Log.e(TAG, "Sign메시지" +signedChallenge);
-
-            // Show toast message for debugging
-//            Toast.makeText(getApplicationContext(), "Debug log message", Toast.LENGTH_SHORT).show();
-//            Toast.makeText(getApplicationContext(), "서명이 완료되었습니다: " + signedChallenge, Toast.LENGTH_SHORT).show();
-
-            return signedChallenge;
+            return encodedSignature;
         } catch (NoSuchAlgorithmException | InvalidKeyException | SignatureException e) {
             Log.d(TAG, "Exception occurred: " + e.getMessage(), e); // Log the exception
             return null;
