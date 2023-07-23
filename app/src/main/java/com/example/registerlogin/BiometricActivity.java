@@ -85,15 +85,8 @@ public class BiometricActivity extends AppCompatActivity {
                 // 공개키를 서버로 전송
                 try {
                     sendPublicKeyToServer(publicKey);
-                } catch (CertificateException e) {
-                    throw new RuntimeException(e);
-                } catch (IOException e) {
-                    throw new RuntimeException(e);
-                } catch (KeyStoreException e) {
-                    throw new RuntimeException(e);
-                } catch (NoSuchAlgorithmException e) {
-                    throw new RuntimeException(e);
-                } catch (KeyManagementException e) {
+                } catch (CertificateException | KeyManagementException | NoSuchAlgorithmException |
+                         KeyStoreException | IOException e) {
                     throw new RuntimeException(e);
                 }
             }
@@ -169,14 +162,14 @@ public class BiometricActivity extends AppCompatActivity {
                 publicKey = keyPair.getPublic();
 
                 KeyStore.PrivateKeyEntry privateKeyEntry = (KeyStore.PrivateKeyEntry) keyStore.getEntry(userID, null);
-                PrivateKey privateKey = privateKeyEntry.getPrivateKey();
+                //PrivateKey privateKey = privateKeyEntry.getPrivateKey();
 //                PrivateKey privateKey = keyPair.getPrivate();
 
                 // 공개키를 서버로 전송
                 sendPublicKeyToServer(publicKey);
 
                 Log.d(TAG, "공개키: " + Base64.encodeToString(publicKey.getEncoded(), Base64.NO_WRAP));
-                Log.d(TAG, "비밀키: " + Base64.encodeToString(privateKey.getEncoded(), Base64.NO_WRAP));
+                //Log.d(TAG, "비밀키: " + Base64.encodeToString(privateKey.getEncoded(), Base64.NO_WRAP));
             } else {
                 // 키 쌍이 이미 존재함
                 KeyStore.PrivateKeyEntry privateKeyEntry = (KeyStore.PrivateKeyEntry) keyStore.getEntry(userID, null);

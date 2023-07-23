@@ -29,7 +29,7 @@ public class VerifyRequest extends StringRequest {
     final static private String URL = "https://192.168.0.5:443/Verify.php";
     private Map<String ,String> map;
 
-    public VerifyRequest(String userID,String message, String signature,String publicKey, Response.Listener<String> listener, Context context) throws CertificateException, IOException, KeyStoreException, NoSuchAlgorithmException, KeyManagementException {
+    public VerifyRequest(String userID, String message, String signature,String publicKey, Response.Listener<String> listener, Context context) throws CertificateException, IOException, KeyStoreException, NoSuchAlgorithmException, KeyManagementException {
         super(Method.POST, URL, listener, null);
 
         Log.d(TAG, "아이디: " + userID);

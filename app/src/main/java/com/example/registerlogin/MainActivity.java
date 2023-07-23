@@ -82,6 +82,7 @@ public class MainActivity extends AppCompatActivity {
 
                             if (jsonObject.has("challenge")) {
                                 String challenge = jsonObject.getString("challenge");
+
                                 Log.d(TAG, "챌린지값: " + challenge);
 
                                 keyStore = KeyStore.getInstance("AndroidKeyStore");
@@ -188,22 +189,6 @@ public class MainActivity extends AppCompatActivity {
                 try {
                     JSONObject jsonObject = new JSONObject(response);
                     boolean success = jsonObject.getBoolean("success");
-                    boolean isvalid = jsonObject.getBoolean("isValidPublicKey");
-                    boolean issame = jsonObject.getBoolean("issame");
-
-                    if(issame){
-                        Log.d(TAG, "키 같음");
-                    }else{
-                        Log.d(TAG, "키 다름");
-
-                    }
-                    //Log.d(TAG, "php에서 온 pk: " + pk);
-                    if (isvalid){
-                        Toast.makeText(getApplicationContext(), "공개키 유효.", Toast.LENGTH_SHORT).show();
-                    }else{
-                        Toast.makeText(getApplicationContext(), "공개키 XX.", Toast.LENGTH_SHORT).show();
-
-                    }
 
                     if (success) {
                         // 검증 성공
