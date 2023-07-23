@@ -125,7 +125,7 @@ public class MainActivity extends AppCompatActivity {
 
                                 if (signedChallenge != null) {
                                     // Method invocation was successful
-                                    Log.d(TAG, "Signed Challenge: " + Base64.encodeToString(signedChallenge, Base64.DEFAULT));
+                                    Log.d(TAG, "Signed Challenge: " + Base64.encodeToString(signedChallenge, Base64.NO_WRAP));
                                 } else {
                                     // Method invocation failed
                                     Log.e(TAG, "Failed to sign the challenge");
@@ -180,7 +180,7 @@ public class MainActivity extends AppCompatActivity {
         keyStore.load(null);
         KeyStore.PrivateKeyEntry privateKeyEntry = (KeyStore.PrivateKeyEntry) keyStore.getEntry(userID, null);
         publicKey = privateKeyEntry.getCertificate().getPublicKey();
-        String stringpublicKey = Base64.encodeToString(publicKey.getEncoded(), Base64.DEFAULT);
+        String stringpublicKey = Base64.encodeToString(publicKey.getEncoded(), Base64.NO_WRAP);
 
         Response.Listener<String> responseListener = new Response.Listener<String>() {
             @Override
@@ -189,7 +189,15 @@ public class MainActivity extends AppCompatActivity {
                     JSONObject jsonObject = new JSONObject(response);
                     boolean success = jsonObject.getBoolean("success");
                     boolean isvalid = jsonObject.getBoolean("isValidPublicKey");
+                    boolean issame = jsonObject.getBoolean("issame");
 
+                    if(issame){
+                        Log.d(TAG, "키 같음");
+                    }else{
+                        Log.d(TAG, "키 다름");
+
+                    }
+                    //Log.d(TAG, "php에서 온 pk: " + pk);
                     if (isvalid){
                         Toast.makeText(getApplicationContext(), "공개키 유효.", Toast.LENGTH_SHORT).show();
                     }else{
@@ -211,7 +219,7 @@ public class MainActivity extends AppCompatActivity {
             }
         };
 
-        VerifyRequest verifyRequest = new VerifyRequest(userID, chall,Base64.encodeToString(signString, Base64.DEFAULT),stringpublicKey, responseListener, MainActivity.this);
+        VerifyRequest verifyRequest = new VerifyRequest(userID, chall,Base64.encodeToString(signString, Base64.NO_WRAP),stringpublicKey, responseListener, MainActivity.this);
         RequestQueue queue = Volley.newRequestQueue(this);
         queue.add(verifyRequest);
     }

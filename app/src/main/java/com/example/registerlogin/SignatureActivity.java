@@ -60,7 +60,7 @@ public class SignatureActivity extends AppCompatActivity {
             signature.initSign(privateKey);
             signature.update(challenge.getBytes());
             byte[] encodedSignature = signature.sign();
-            String signedChallenge = Base64.encodeToString(encodedSignature, Base64.DEFAULT);
+            String signedChallenge = Base64.encodeToString(encodedSignature, Base64.NO_WRAP);
 
             return encodedSignature;
         } catch (NoSuchAlgorithmException | InvalidKeyException | SignatureException e) {

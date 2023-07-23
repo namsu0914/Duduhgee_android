@@ -138,7 +138,7 @@ public class BiometricActivity extends AppCompatActivity {
                 KeyStore.PrivateKeyEntry privateKeyEntry = (KeyStore.PrivateKeyEntry) keyStore.getEntry(userID, null);
                 publicKey = privateKeyEntry.getCertificate().getPublicKey();
                 // 공개 키와 개인 키 출력
-                Log.d(TAG, "Public Key: " + Base64.encodeToString(publicKey.getEncoded(), Base64.DEFAULT));
+                Log.d(TAG, "Public Key: " + Base64.encodeToString(publicKey.getEncoded(), Base64.NO_WRAP));
                 Toast.makeText(getApplicationContext(), "이미 저장된 생체정보입니다. ", Toast.LENGTH_SHORT).show();
             } else {
                 // 키 쌍이 존재하지 않음
@@ -175,14 +175,14 @@ public class BiometricActivity extends AppCompatActivity {
                 // 공개키를 서버로 전송
                 sendPublicKeyToServer(publicKey);
 
-                Log.d(TAG, "공개키: " + Base64.encodeToString(publicKey.getEncoded(), Base64.DEFAULT));
-                Log.d(TAG, "비밀키: " + Base64.encodeToString(privateKey.getEncoded(), Base64.DEFAULT));
+                Log.d(TAG, "공개키: " + Base64.encodeToString(publicKey.getEncoded(), Base64.NO_WRAP));
+                Log.d(TAG, "비밀키: " + Base64.encodeToString(privateKey.getEncoded(), Base64.NO_WRAP));
             } else {
                 // 키 쌍이 이미 존재함
                 KeyStore.PrivateKeyEntry privateKeyEntry = (KeyStore.PrivateKeyEntry) keyStore.getEntry(userID, null);
                 publicKey = privateKeyEntry.getCertificate().getPublicKey();
                 // 공개 키와 개인 키 출력
-                Log.d(TAG, "Public Key: " + Base64.encodeToString(publicKey.getEncoded(), Base64.DEFAULT));
+                Log.d(TAG, "Public Key: " + Base64.encodeToString(publicKey.getEncoded(), Base64.NO_WRAP));
                 Toast.makeText(getApplicationContext(), "이미 저장된 생체정보입니다. ", Toast.LENGTH_SHORT).show();
             }
         } catch (NoSuchAlgorithmException | NoSuchProviderException | InvalidAlgorithmParameterException | KeyStoreException | CertificateException | IOException | UnrecoverableEntryException e) {
