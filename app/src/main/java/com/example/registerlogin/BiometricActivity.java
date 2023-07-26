@@ -78,9 +78,7 @@ public class BiometricActivity extends AppCompatActivity {
             public void onAuthenticationSucceeded(BiometricPrompt.AuthenticationResult result) {
                 super.onAuthenticationSucceeded(result);
                 notifyUser("인증에 성공하였습니다");
-                // 처리를 진행하세요
-                //generateKeyPair();
-                // 키 쌍 생성 확인 코드 추가
+
                 checkKeyPairExistence();
                 // 공개키를 서버로 전송
                 try {
