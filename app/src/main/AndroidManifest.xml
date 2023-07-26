@@ -32,6 +32,9 @@
         <activity
             android:name=".BiometricActivity"
             android:exported="false" />
+        <activity
+            android:name=".SignatureActivity"
+            android:exported="false" />
     </application>
 
 </manifest>

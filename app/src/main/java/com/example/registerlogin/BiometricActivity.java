@@ -1,5 +1,6 @@
 package com.example.registerlogin;
 
+import android.annotation.SuppressLint;
 import android.annotation.TargetApi;
 import android.app.KeyguardManager;
 import android.content.Context;
@@ -48,18 +49,26 @@ public class BiometricActivity extends AppCompatActivity {
 
     private CancellationSignal cancellationSignal = null;
     private BiometricPrompt.AuthenticationCallback authenticationCallback;
-    private Button start_authentication;
+    private Button btn_auth;
+    private Button btn_del;
 
-    //private static final String KEY_NAME = "my_key";
+    private boolean start_authenticationIsClicked = false;
+    private boolean delete_bioIsClicked = false;
+
     private KeyStore keyStore;
     private PublicKey publicKey;
     private static final String TAG = "BiometricActivity";
 
+    @SuppressLint("MissingInflatedId")
     @TargetApi(Build.VERSION_CODES.P)
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
+
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_biometric);
+
+        btn_auth = findViewById(R.id.start_authentication);
+        btn_del  = findViewById(R.id.delete_bio);
 
         authenticationCallback = new BiometricPrompt.AuthenticationCallback() {
 
@@ -74,31 +83,44 @@ public class BiometricActivity extends AppCompatActivity {
                 super.onAuthenticationError(errorCode, errString);
                 notifyUser("Authentication Error: " + errString);
             }
+
             @Override
             public void onAuthenticationSucceeded(BiometricPrompt.AuthenticationResult result) {
                 super.onAuthenticationSucceeded(result);
                 notifyUser("인증에 성공하였습니다");
 
-                checkKeyPairExistence();
-                // 공개키를 서버로 전송
-                try {
-                    sendPublicKeyToServer(publicKey);
-                } catch (CertificateException | KeyManagementException | NoSuchAlgorithmException |
-                         KeyStoreException | IOException e) {
-                    throw new RuntimeException(e);
+                if (start_authenticationIsClicked) {
+                    checkKeyPairExistence();
+                    // 공개키를 서버로 전송
+                    try {
+                        sendPublicKeyToServer(publicKey);
+                    } catch (CertificateException | IOException | KeyStoreException |
+                             NoSuchAlgorithmException | KeyManagementException e) {
+                        throw new RuntimeException(e);
+                    }
+
+                } else if (delete_bioIsClicked) {
+                    try {
+                        deletebio();
+                    } catch (KeyStoreException | CertificateException | IOException |
+                             NoSuchAlgorithmException e) {
+                        throw new RuntimeException(e);
+                    }
+                }else{
+
                 }
             }
-
         };
 
 
-
-
-        start_authentication = findViewById(R.id.start_authentication);
-        start_authentication.setOnClickListener(new View.OnClickListener() {
+        btn_auth.setOnClickListener(new View.OnClickListener() {
             @TargetApi(Build.VERSION_CODES.P)
             @Override
             public void onClick(View view) {
+
+                start_authenticationIsClicked = true;
+                delete_bioIsClicked = false;
+
                 if (checkBiometricSupport()) {
                     BiometricPrompt biometricPrompt = new BiometricPrompt.Builder(BiometricActivity.this)
                             .setTitle("지문 인증을 시작합니다")
@@ -115,11 +137,42 @@ public class BiometricActivity extends AppCompatActivity {
                 }
             }
         });
+
+
+        btn_del.setOnClickListener(new View.OnClickListener() {
+
+            @TargetApi(Build.VERSION_CODES.P)
+
+            @Override
+            public void onClick(View v) {
+
+                delete_bioIsClicked = true;
+                start_authenticationIsClicked = false;
+
+                if (checkBiometricSupport()) {
+                    BiometricPrompt biometricPrompt = new BiometricPrompt.Builder(BiometricActivity.this)
+                            .setTitle("지문 인증을 시작합니다")
+                            .setSubtitle("지문 인증 시작")
+                            .setDescription("지문")
+                            .setNegativeButton("Cancel", getMainExecutor(), new DialogInterface.OnClickListener() {
+                                @Override
+                                public void onClick(DialogInterface dialogInterface, int i) {
+                                    notifyUser("Authentication Cancelled");
+                                }
+                            }).build();
+
+                    biometricPrompt.authenticate(getCancellationSignal(), getMainExecutor(), authenticationCallback);
+
+                }
+            }
+        });
+
     }
 
     private void checkKeyPairExistence() {
         Intent intent = getIntent();
         String userID = intent.getStringExtra("userID");
+
         try {
             keyStore = KeyStore.getInstance("AndroidKeyStore");
             keyStore.load(null);
@@ -142,6 +195,8 @@ public class BiometricActivity extends AppCompatActivity {
         }
     }
 
+
+
     private void generateKeyPair() {
         Intent intent = getIntent();
         String userID = intent.getStringExtra("userID");
@@ -160,14 +215,13 @@ public class BiometricActivity extends AppCompatActivity {
                 publicKey = keyPair.getPublic();
 
                 KeyStore.PrivateKeyEntry privateKeyEntry = (KeyStore.PrivateKeyEntry) keyStore.getEntry(userID, null);
-                //PrivateKey privateKey = privateKeyEntry.getPrivateKey();
+                PrivateKey privateKey = privateKeyEntry.getPrivateKey();
 //                PrivateKey privateKey = keyPair.getPrivate();
 
                 // 공개키를 서버로 전송
                 sendPublicKeyToServer(publicKey);
 
                 Log.d(TAG, "공개키: " + Base64.encodeToString(publicKey.getEncoded(), Base64.NO_WRAP));
-                //Log.d(TAG, "비밀키: " + Base64.encodeToString(privateKey.getEncoded(), Base64.NO_WRAP));
             } else {
                 // 키 쌍이 이미 존재함
                 KeyStore.PrivateKeyEntry privateKeyEntry = (KeyStore.PrivateKeyEntry) keyStore.getEntry(userID, null);
@@ -226,7 +280,7 @@ public class BiometricActivity extends AppCompatActivity {
     }
 
     @TargetApi(Build.VERSION_CODES.P)
-    private Boolean checkBiometricSupport() {
+    public Boolean checkBiometricSupport() {
         KeyguardManager keyguardManager = (KeyguardManager) getSystemService(Context.KEYGUARD_SERVICE);
         if (!keyguardManager.isDeviceSecure()) {
             notifyUser("Fingerprint authentication has not been enabled in settings");
@@ -246,4 +300,55 @@ public class BiometricActivity extends AppCompatActivity {
     private void notifyUser(String message) {
         Toast.makeText(BiometricActivity.this, message, Toast.LENGTH_SHORT).show();
     }
+
+    private void deletebio() throws KeyStoreException, CertificateException, IOException, NoSuchAlgorithmException {
+        keyStore = KeyStore.getInstance("AndroidKeyStore");
+        keyStore.load(null);
+        Intent intent = getIntent();
+        String userID = intent.getStringExtra("userID");
+
+        if (keyStore.containsAlias(userID)){
+            Log.d(TAG, "키스토어에 있습니다.");
+            keyStore.deleteEntry(userID);
+            Response.Listener<String> responseListener = new Response.Listener<String>() {
+                @Override
+                public void onResponse(String response) {
+                    try {
+                        JSONObject jsonObject = new JSONObject(response);
+                        boolean success = jsonObject.getBoolean("success");
+
+                        if (success) {
+                            Toast.makeText(getApplicationContext(), "생체정보가 삭제되었습니다.", Toast.LENGTH_SHORT).show();
+                        } else {
+                            Toast.makeText(getApplicationContext(), "삭제 실패하였습니다.", Toast.LENGTH_SHORT).show();
+                        }
+
+                    } catch (JSONException e) {
+                        throw new RuntimeException(e);
+                    }
+                }
+            };
+
+            DeleteRequest deleteRequest;
+            try {
+                deleteRequest = new DeleteRequest(userID, responseListener, BiometricActivity.this);
+            } catch (CertificateException | IOException | KeyStoreException |
+                     NoSuchAlgorithmException | KeyManagementException e) {
+                throw new RuntimeException(e);
+            }
+            RequestQueue queue = Volley.newRequestQueue(BiometricActivity.this);
+            queue.add(deleteRequest);
+            if (keyStore.containsAlias(userID)){
+                Log.d(TAG, "키스토어에서 삭제 실패");
+            } else {
+                Log.d(TAG, "키스토어에서 삭제됨");
+            }
+        } else {
+            Log.d(TAG, "키스토어에 없습니다. ");
+        }
+
+    }
+
 }
+
+

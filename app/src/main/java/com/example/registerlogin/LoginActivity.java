@@ -50,22 +50,29 @@ public class LoginActivity extends AppCompatActivity {
                 String userID = et_id.getText().toString();
                 String userPass = et_pass.getText().toString();
 
-                Response.Listener<String> responseListner= new Response.Listener<String>() {
+                // Function to check for special characters
+                boolean containsSpecialCharacters = containsSpecialCharacters(userID) || containsSpecialCharacters(userPass);
+
+                if (containsSpecialCharacters) {
+                    Toast.makeText(LoginActivity.this, "특수문자는 사용할 수 없습니다.", Toast.LENGTH_SHORT).show();
+                    return;
+                }
+
+                Response.Listener<String> responseListner = new Response.Listener<String>() {
                     @Override
                     public void onResponse(String response) {
                         try {
-                            JSONObject jsonObject= new JSONObject(response);
-                            boolean success= jsonObject.getBoolean("success"); // 서버통신 잘 됐냐?
+                            JSONObject jsonObject = new JSONObject(response);
+                            boolean success = jsonObject.getBoolean("success"); // 서버통신 잘 됐냐?
                             if (success) {
                                 String userID = jsonObject.getString("userID");
                                 String userPass = jsonObject.getString("userPassword");
                                 Toast.makeText(getApplicationContext(), "로그인에 성공하였습니다.", Toast.LENGTH_SHORT).show();
-                                Intent intent;
-                                intent = new Intent(LoginActivity.this, MainActivity.class);
+                                Intent intent = new Intent(LoginActivity.this, MainActivity.class);
                                 intent.putExtra("userID", userID);
                                 intent.putExtra("userPass", userPass);
                                 startActivity(intent);
-                            }else{
+                            } else {
                                 Toast.makeText(getApplicationContext(), "로그인에 실패하였습니다.", Toast.LENGTH_SHORT).show();
                                 return;
                             }
@@ -78,15 +85,8 @@ public class LoginActivity extends AppCompatActivity {
                 LoginRequest loginRequest = null;
                 try {
                     loginRequest = new LoginRequest(userID, userPass, responseListner, LoginActivity.this);
-                } catch (CertificateException e) {
-                    throw new RuntimeException(e);
-                } catch (IOException e) {
-                    throw new RuntimeException(e);
-                } catch (KeyStoreException e) {
-                    throw new RuntimeException(e);
-                } catch (NoSuchAlgorithmException e) {
-                    throw new RuntimeException(e);
-                } catch (KeyManagementException e) {
+                } catch (CertificateException | IOException | KeyStoreException |
+                         NoSuchAlgorithmException | KeyManagementException e) {
                     throw new RuntimeException(e);
                 }
                 RequestQueue queue = Volley.newRequestQueue(LoginActivity.this);
@@ -94,5 +94,10 @@ public class LoginActivity extends AppCompatActivity {
             }
         });
 
+    }
+
+    // Function to check for special characters
+    private boolean containsSpecialCharacters(String content) {
+        return content.matches(".*[^a-zA-Z0-9가-힣].*");
     }
 }
