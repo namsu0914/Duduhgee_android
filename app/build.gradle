@@ -3,11 +3,11 @@ plugins {
 }
 
 android {
-    namespace 'com.example.registerlogin'
+    namespace 'com.example.duduhgee'
     compileSdk 33
 
     defaultConfig {
-        applicationId "com.example.registerlogin"
+        applicationId "com.example.duduhgee"
         minSdk 30
         targetSdk 33
         versionCode 1
