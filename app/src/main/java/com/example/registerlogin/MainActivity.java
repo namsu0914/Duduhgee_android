@@ -52,28 +52,7 @@ public class MainActivity extends AppCompatActivity {
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
-        authenticationCallback = new BiometricPrompt.AuthenticationCallback() {
 
-            @Override
-            public void onAuthenticationFailed() {
-                super.onAuthenticationFailed();
-                notifyUser("Authentication Failed");
-            }
-
-            @Override
-            public void onAuthenticationError(int errorCode, CharSequence errString) {
-                super.onAuthenticationError(errorCode, errString);
-                notifyUser("Authentication Error: " + errString);
-            }
-
-            @Override
-            public void onAuthenticationSucceeded(BiometricPrompt.AuthenticationResult result) {
-                super.onAuthenticationSucceeded(result);
-                notifyUser("인증에 성공하였습니다");
-
-
-            }
-        };
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
@@ -99,20 +78,7 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void onClick(View view) {
 
-                if (checkBiometricSupport()) {
-                    BiometricPrompt biometricPrompt = new BiometricPrompt.Builder(MainActivity.this)
-                            .setTitle("지문 인증을 시작합니다")
-                            .setSubtitle("지문 인증 시작")
-                            .setDescription("지문")
-                            .setNegativeButton("Cancel", getMainExecutor(), new DialogInterface.OnClickListener() {
-                                @Override
-                                public void onClick(DialogInterface dialogInterface, int i) {
-                                    notifyUser("Authentication Cancelled");
-                                }
-                            }).build();
 
-                    biometricPrompt.authenticate(getCancellationSignal(), getMainExecutor(), authenticationCallback);
-                }
                 Response.Listener<String> responseListener = new Response.Listener<String>() {
                     @Override
                     public void onResponse(String response) {
@@ -159,26 +125,72 @@ public class MainActivity extends AppCompatActivity {
                                     Log.d(TAG, "개인키 초기화 안됨");
                                 }
 
-                                KeyStore.PrivateKeyEntry privateKeyEntry = (KeyStore.PrivateKeyEntry) keyStore.getEntry(userID, null);
-                                privateKey = privateKeyEntry.getPrivateKey();
+                                authenticationCallback = new BiometricPrompt.AuthenticationCallback() {
+                                    @Override
+                                    public void onAuthenticationFailed() {
+                                        super.onAuthenticationFailed();
+                                        notifyUser("Authentication Failed");
+                                    }
 
-                                SignatureActivity signatureActivity = new SignatureActivity();
-                                byte[] signedChallenge = signatureActivity.signChallenge(challenge, privateKey);
+                                    @Override
+                                    public void onAuthenticationError(int errorCode, CharSequence errString) {
+                                        super.onAuthenticationError(errorCode, errString);
+                                        notifyUser("Authentication Error: " + errString);
+                                    }
 
-                                if (signedChallenge != null) {
-                                    // Method invocation was successful
-                                    Log.d(TAG, "Signed Challenge: " + Base64.encodeToString(signedChallenge, Base64.NO_WRAP));
-                                } else {
-                                    // Method invocation failed
-                                    Log.e(TAG, "Failed to sign the challenge");
+                                    @Override
+                                    public void onAuthenticationSucceeded(BiometricPrompt.AuthenticationResult result) {
+                                        super.onAuthenticationSucceeded(result);
+                                        notifyUser("인증에 성공하였습니다");
+
+                                        KeyStore.PrivateKeyEntry privateKeyEntry = null;
+                                        try {
+                                            privateKeyEntry = (KeyStore.PrivateKeyEntry) keyStore.getEntry(userID, null);
+                                        } catch (KeyStoreException e) {
+                                            throw new RuntimeException(e);
+                                        } catch (NoSuchAlgorithmException e) {
+                                            throw new RuntimeException(e);
+                                        } catch (UnrecoverableEntryException e) {
+                                            throw new RuntimeException(e);
+                                        }
+                                        privateKey = privateKeyEntry.getPrivateKey();
+
+                                        SignatureActivity signatureActivity = new SignatureActivity();
+                                        byte[] signedChallenge = signatureActivity.signChallenge(challenge, privateKey);
+
+                                        if (signedChallenge != null) {
+                                            // Method invocation was successful
+                                            Log.d(TAG, "Signed Challenge: " + Base64.encodeToString(signedChallenge, Base64.NO_WRAP));
+                                        } else {
+                                            // Method invocation failed
+                                            Log.e(TAG, "Failed to sign the challenge");
+                                        }
+
+                                        try {
+                                            verifySignature(signedChallenge, challenge, userID); // userID에 실제 사용자의 ID를 전달해야 함
+                                        } catch (KeyStoreException | CertificateException |
+                                                 IOException | NoSuchAlgorithmException |
+                                                 UnrecoverableEntryException |
+                                                 KeyManagementException e) {
+                                            throw new RuntimeException(e);
+                                        }
+
+                                    }
+                                };
+                                if (checkBiometricSupport()) {
+                                    BiometricPrompt biometricPrompt = new BiometricPrompt.Builder(MainActivity.this)
+                                            .setTitle("지문 인증을 시작합니다")
+                                            .setSubtitle("지문 인증 시작")
+                                            .setDescription("지문")
+                                            .setNegativeButton("Cancel", getMainExecutor(), new DialogInterface.OnClickListener() {
+                                                @Override
+                                                public void onClick(DialogInterface dialogInterface, int i) {
+                                                    notifyUser("Authentication Cancelled");
+                                                }
+                                            }).build();
+
+                                    biometricPrompt.authenticate(getCancellationSignal(), getMainExecutor(), authenticationCallback);
                                 }
-                                //Toast.makeText(getApplicationContext(), "signed된 메시지2: " + Base64.encodeToString(signedChallenge, Base64.DEFAULT), Toast.LENGTH_SHORT).show();
-
-                                //Intent intent = getIntent();
-                                //String userID = intent.getStringExtra("userID");
-                                verifySignature(signedChallenge, challenge, userID); // userID에 실제 사용자의 ID를 전달해야 함
-
-
 
                             } else {
                                 Log.e(TAG, "Challenge key not found in JSON response");
@@ -188,8 +200,6 @@ public class MainActivity extends AppCompatActivity {
                             throw new RuntimeException(e);
                         } catch (CertificateException | KeyStoreException | IOException |
                                  NoSuchAlgorithmException | UnrecoverableEntryException e) {
-                            throw new RuntimeException(e);
-                        } catch (KeyManagementException e) {
                             throw new RuntimeException(e);
                         }
                     }
