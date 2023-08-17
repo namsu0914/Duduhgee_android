@@ -37,6 +37,9 @@
         <activity
             android:name=".SignatureActivity"
             android:exported="false" />
+        <activity
+            android:name=".BuyActivity"
+            android:exported="false" />
     </application>
 
 </manifest>

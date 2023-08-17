@@ -65,7 +65,7 @@ public class BiometricActivity extends AppCompatActivity {
     protected void onCreate(@Nullable Bundle savedInstanceState) {
 
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_biometric);
+        setContentView(R.layout.activity_myinfo);
 
         btn_auth = findViewById(R.id.start_authentication);
         btn_del  = findViewById(R.id.delete_bio);
@@ -120,6 +120,39 @@ public class BiometricActivity extends AppCompatActivity {
 
                 start_authenticationIsClicked = true;
                 delete_bioIsClicked = false;
+                Response.Listener<String> responseListener = new Response.Listener<String>() {
+                    @Override
+                    public void onResponse(String response) {
+                        try {
+                            JSONObject jsonObject = new JSONObject(response);
+                            String header = jsonObject.getString("Header");
+                            String username = jsonObject.getString("Username");
+                            String challenge = jsonObject.getString("Challenge");
+                            String policy = jsonObject.getString("Policy");
+
+                            Log.d(TAG,"Header: "+header);
+                            Log.d(TAG,"Username: "+username);
+                            Log.d(TAG,"Challenge: "+challenge);
+                            Log.d(TAG,"Policy: "+policy);
+
+
+                        } catch (JSONException e) {
+                            Toast.makeText(getApplicationContext(), "오류가 발생하였습니다. ", Toast.LENGTH_SHORT).show();
+                            throw new RuntimeException(e);
+                        }
+                    }
+                };
+                FIDORegisterRequest fidoRegisterRequest = null;
+                try {
+                    Intent intent = getIntent();
+                    String userID = intent.getStringExtra("userID");
+                    fidoRegisterRequest = new FIDORegisterRequest(userID, responseListener, BiometricActivity.this);
+                } catch (CertificateException | IOException | KeyStoreException |
+                         NoSuchAlgorithmException | KeyManagementException e) {
+                    throw new RuntimeException(e);
+                }
+                RequestQueue queue = Volley.newRequestQueue(BiometricActivity.this);
+                queue.add(fidoRegisterRequest);
 
                 if (checkBiometricSupport()) {
                     BiometricPrompt biometricPrompt = new BiometricPrompt.Builder(BiometricActivity.this)
@@ -346,9 +379,5 @@ public class BiometricActivity extends AppCompatActivity {
         } else {
             Log.d(TAG, "키스토어에 없습니다. ");
         }
-
     }
-
 }
-
-

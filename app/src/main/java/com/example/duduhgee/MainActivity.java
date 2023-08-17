@@ -14,6 +14,7 @@ import android.util.Base64;
 import android.util.Log;
 import android.view.View;
 import android.widget.Button;
+import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -41,7 +42,7 @@ public class MainActivity extends AppCompatActivity {
 
     private TextView tv_id;
     private Button btn_info;
-    private Button btn_buy;
+
     //private static final String KEY_NAME = userID;
     private KeyStore keyStore;
     private PrivateKey privateKey;
@@ -52,13 +53,25 @@ public class MainActivity extends AppCompatActivity {
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
-
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
         tv_id = findViewById(R.id.tv_id);
         btn_info = findViewById(R.id.btn_info);
-        btn_buy = findViewById(R.id.btn_buy);
+
+        ImageView imageViewClickable = findViewById(R.id.imageViewClickable);
+        Intent intent = getIntent();
+        String userID = intent.getStringExtra("userID");
+
+        imageViewClickable.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                // Start the new activity when the ImageView is clicked
+                Intent intent = new Intent(MainActivity.this, BuyActivity.class);
+                intent.putExtra("userID", userID);
+                startActivity(intent);
+            }
+        });
 
         // 회원정보 버튼
         btn_info.setOnClickListener(new View.OnClickListener() {
@@ -72,152 +85,9 @@ public class MainActivity extends AppCompatActivity {
                 startActivity(intent);
             }
         });
-
-        // 구매하기 버튼
-        btn_buy.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-
-
-                Response.Listener<String> responseListener = new Response.Listener<String>() {
-                    @Override
-                    public void onResponse(String response) {
-
-                        try {
-                            JSONObject jsonObject = new JSONObject(response);
-
-                            if (jsonObject.has("challenge")) {
-                                String challenge = jsonObject.getString("challenge");
-
-                                Log.d(TAG, "챌린지값: " + challenge);
-
-                                keyStore = KeyStore.getInstance("AndroidKeyStore");
-                                keyStore.load(null);
-
-                                Intent intent = getIntent();
-                                String userID = intent.getStringExtra("userID");
-
-                                boolean hasAccess = checkPrivateKeyAccess(userID);
-                                if (hasAccess) {
-                                    // 개인 키에 액세스할 수 있는 권한이 있음
-                                    Log.d(TAG, "개인 키에 액세스할 수 있는 권한이 있음");
-                                } else {
-                                    // 개인 키에 액세스할 수 있는 권한이 없음
-                                    Log.d(TAG, "개인 키에 액세스할 수 있는 권한이 없음");
-                                }
-
-                                if (keyStore.containsAlias(userID)) {
-                                    // 키 쌍이 존재함
-                                    // 공개 키와 개인 키 출력
-                                    Log.d(TAG, "키스토어 저장됨");
-                                } else {
-                                    // 키 쌍이 존재하지 않음
-                                    Log.d(TAG, "Key pair not found");
-                                }
-
-                                KeyStore.Entry entry = keyStore.getEntry(userID, null);
-
-                                if (entry instanceof KeyStore.PrivateKeyEntry) {
-                                    // 개인키가 초기화되었으므로 접근 가능
-                                    Log.d(TAG, "개인키 초기화됨");
-                                } else {
-                                    // 개인키가 초기화되지 않았으므로 접근 불가능
-                                    Log.d(TAG, "개인키 초기화 안됨");
-                                }
-
-                                authenticationCallback = new BiometricPrompt.AuthenticationCallback() {
-                                    @Override
-                                    public void onAuthenticationFailed() {
-                                        super.onAuthenticationFailed();
-                                        notifyUser("Authentication Failed");
-                                    }
-
-                                    @Override
-                                    public void onAuthenticationError(int errorCode, CharSequence errString) {
-                                        super.onAuthenticationError(errorCode, errString);
-                                        notifyUser("Authentication Error: " + errString);
-                                    }
-
-                                    @Override
-                                    public void onAuthenticationSucceeded(BiometricPrompt.AuthenticationResult result) {
-                                        super.onAuthenticationSucceeded(result);
-                                        notifyUser("인증에 성공하였습니다");
-
-                                        KeyStore.PrivateKeyEntry privateKeyEntry = null;
-                                        try {
-                                            privateKeyEntry = (KeyStore.PrivateKeyEntry) keyStore.getEntry(userID, null);
-                                        } catch (KeyStoreException e) {
-                                            throw new RuntimeException(e);
-                                        } catch (NoSuchAlgorithmException e) {
-                                            throw new RuntimeException(e);
-                                        } catch (UnrecoverableEntryException e) {
-                                            throw new RuntimeException(e);
-                                        }
-                                        privateKey = privateKeyEntry.getPrivateKey();
-
-                                        SignatureActivity signatureActivity = new SignatureActivity();
-                                        byte[] signedChallenge = signatureActivity.signChallenge(challenge, privateKey);
-
-                                        if (signedChallenge != null) {
-                                            // Method invocation was successful
-                                            Log.d(TAG, "Signed Challenge: " + Base64.encodeToString(signedChallenge, Base64.NO_WRAP));
-                                        } else {
-                                            // Method invocation failed
-                                            Log.e(TAG, "Failed to sign the challenge");
-                                        }
-
-                                        try {
-                                            verifySignature(signedChallenge, challenge, userID); // userID에 실제 사용자의 ID를 전달해야 함
-                                        } catch (KeyStoreException | CertificateException |
-                                                 IOException | NoSuchAlgorithmException |
-                                                 UnrecoverableEntryException |
-                                                 KeyManagementException e) {
-                                            throw new RuntimeException(e);
-                                        }
-
-                                    }
-                                };
-                                if (checkBiometricSupport()) {
-                                    BiometricPrompt biometricPrompt = new BiometricPrompt.Builder(MainActivity.this)
-                                            .setTitle("지문 인증을 시작합니다")
-                                            .setSubtitle("지문 인증 시작")
-                                            .setDescription("지문")
-                                            .setNegativeButton("Cancel", getMainExecutor(), new DialogInterface.OnClickListener() {
-                                                @Override
-                                                public void onClick(DialogInterface dialogInterface, int i) {
-                                                    notifyUser("Authentication Cancelled");
-                                                }
-                                            }).build();
-
-                                    biometricPrompt.authenticate(getCancellationSignal(), getMainExecutor(), authenticationCallback);
-                                }
-
-                            } else {
-                                Log.e(TAG, "Challenge key not found in JSON response");
-                            }
-                        } catch (JSONException e) {
-                            Toast.makeText(getApplicationContext(), "오류가 발생하였습니다. ", Toast.LENGTH_SHORT).show();
-                            throw new RuntimeException(e);
-                        } catch (CertificateException | KeyStoreException | IOException |
-                                 NoSuchAlgorithmException | UnrecoverableEntryException e) {
-                            throw new RuntimeException(e);
-                        }
-                    }
-                };
-                BuyRequest buyRequest = new BuyRequest(responseListener);
-                RequestQueue queue = Volley.newRequestQueue(MainActivity.this);
-                queue.add(buyRequest);
-            }
-        });
-
-        Intent intent = getIntent();
-        String userID = intent.getStringExtra("userID");
         tv_id.setText(userID);
-
-
-
-
     }
+
 
 
     private void verifySignature(byte[] signString, String chall, String userID) throws KeyStoreException, CertificateException, IOException, NoSuchAlgorithmException, UnrecoverableEntryException, KeyManagementException {
@@ -248,10 +118,11 @@ public class MainActivity extends AppCompatActivity {
             }
         };
 
-        VerifyRequest verifyRequest = new VerifyRequest(userID, chall,Base64.encodeToString(signString, Base64.NO_WRAP),stringpublicKey, responseListener, MainActivity.this);
+        VerifyRequest verifyRequest = new VerifyRequest(userID, chall, Base64.encodeToString(signString, Base64.NO_WRAP), stringpublicKey, responseListener, MainActivity.this);
         RequestQueue queue = Volley.newRequestQueue(this);
         queue.add(verifyRequest);
     }
+
     private void notifyUser(String message) {
         Toast.makeText(MainActivity.this, message, Toast.LENGTH_SHORT).show();
     }
@@ -268,11 +139,13 @@ public class MainActivity extends AppCompatActivity {
             keyStore.load(null);
 
             return keyStore.entryInstanceOf(keyAlias, KeyStore.PrivateKeyEntry.class);
-        } catch (KeyStoreException | CertificateException | NoSuchAlgorithmException | IOException e) {
+        } catch (KeyStoreException | CertificateException | NoSuchAlgorithmException |
+                 IOException e) {
             e.printStackTrace();
         }
         return false;
     }
+
     @TargetApi(Build.VERSION_CODES.P)
     public Boolean checkBiometricSupport() {
         KeyguardManager keyguardManager = (KeyguardManager) getSystemService(Context.KEYGUARD_SERVICE);
@@ -292,4 +165,3 @@ public class MainActivity extends AppCompatActivity {
     }
 
 }
-
