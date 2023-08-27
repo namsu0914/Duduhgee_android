@@ -106,11 +106,13 @@ public class BiometricActivity extends AppCompatActivity {
                             tv_amount1.setText(amount);
                             tv_unitprice1.setText(unitPrice);
                             tv_totalprice1.setText(totalPrice);
-                        }else
+                        }else{
                             tv_product2.setText(product);
                             tv_amount2.setText(amount);
                             tv_unitprice2.setText(unitPrice);
                             tv_totalprice2.setText(totalPrice);
+                        }
+
                     }
 
                 } catch (JSONException e) {
