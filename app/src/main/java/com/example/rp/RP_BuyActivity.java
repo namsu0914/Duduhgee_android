@@ -1,6 +1,5 @@
-package com.example.duduhgee;
+package com.example.rp;
 
-import android.annotation.SuppressLint;
 import android.annotation.TargetApi;
 import android.app.KeyguardManager;
 import android.content.Context;
@@ -11,50 +10,43 @@ import android.hardware.biometrics.BiometricPrompt;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.CancellationSignal;
-import android.security.keystore.KeyGenParameterSpec;
-import android.security.keystore.KeyProperties;
 import android.util.Base64;
 import android.util.Log;
 import android.view.View;
 import android.widget.Button;
 import android.widget.Toast;
 
-import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
 
 import com.android.volley.RequestQueue;
 import com.android.volley.Response;
-import com.android.volley.VolleyError;
 import com.android.volley.toolbox.Volley;
+import com.example.asm.ASM_SignatureActivity;
+import com.example.duduhgee.R;
 
 import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.io.IOException;
-import java.security.InvalidAlgorithmParameterException;
 import java.security.KeyManagementException;
-import java.security.KeyPair;
-import java.security.KeyPairGenerator;
 import java.security.KeyStore;
 import java.security.KeyStoreException;
 import java.security.NoSuchAlgorithmException;
-import java.security.NoSuchProviderException;
 import java.security.PrivateKey;
 import java.security.PublicKey;
 import java.security.UnrecoverableEntryException;
 import java.security.cert.CertificateException;
 
-public class BuyActivity extends AppCompatActivity {
+public class RP_BuyActivity extends AppCompatActivity {
 
     private Button btn_buy;
-    //private static final String KEY_NAME = userID;
     private KeyStore keyStore;
     private PrivateKey privateKey;
     private PublicKey publicKey;
     private BiometricPrompt.AuthenticationCallback authenticationCallback;
     private CancellationSignal cancellationSignal = null;
-    private static final String TAG = BuyActivity.class.getSimpleName();
+    private static final String TAG = RP_BuyActivity.class.getSimpleName();
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -137,7 +129,7 @@ public class BuyActivity extends AppCompatActivity {
                                         }
                                         privateKey = privateKeyEntry.getPrivateKey();
 
-                                        SignatureActivity signatureActivity = new SignatureActivity();
+                                        ASM_SignatureActivity signatureActivity = new ASM_SignatureActivity();
                                         byte[] signedChallenge = signatureActivity.signChallenge(challenge, privateKey);
 
                                         if (signedChallenge != null) {
@@ -160,7 +152,7 @@ public class BuyActivity extends AppCompatActivity {
                                     }
                                 };
                                 if (checkBiometricSupport()) {
-                                    BiometricPrompt biometricPrompt = new BiometricPrompt.Builder(BuyActivity.this)
+                                    BiometricPrompt biometricPrompt = new BiometricPrompt.Builder(RP_BuyActivity.this)
                                             .setTitle("지문 인증을 시작합니다")
                                             .setSubtitle("지문 인증 시작")
                                             .setDescription("지문")
@@ -186,8 +178,8 @@ public class BuyActivity extends AppCompatActivity {
                         }
                     }
                 };
-                BuyRequest buyRequest = new BuyRequest(responseListener);
-                RequestQueue queue = Volley.newRequestQueue(BuyActivity.this);
+                RP_BuyRequest buyRequest = new RP_BuyRequest(responseListener);
+                RequestQueue queue = Volley.newRequestQueue(RP_BuyActivity.this);
                 queue.add(buyRequest);
             }
         });
@@ -221,13 +213,13 @@ public class BuyActivity extends AppCompatActivity {
             }
         };
 
-        VerifyRequest verifyRequest = new VerifyRequest(userID, chall, Base64.encodeToString(signString, Base64.NO_WRAP), stringpublicKey, responseListener, BuyActivity.this);
+        RP_VerifyRequest verifyRequest = new RP_VerifyRequest(userID, chall, Base64.encodeToString(signString, Base64.NO_WRAP), stringpublicKey, responseListener, RP_BuyActivity.this);
         RequestQueue queue = Volley.newRequestQueue(this);
         queue.add(verifyRequest);
     }
 
     private void notifyUser(String message) {
-        Toast.makeText(BuyActivity.this, message, Toast.LENGTH_SHORT).show();
+        Toast.makeText(RP_BuyActivity.this, message, Toast.LENGTH_SHORT).show();
     }
 
     private CancellationSignal getCancellationSignal() {

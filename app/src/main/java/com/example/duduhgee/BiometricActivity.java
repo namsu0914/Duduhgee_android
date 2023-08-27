@@ -17,6 +17,7 @@ import android.util.Base64;
 import android.util.Log;
 import android.view.View;
 import android.widget.Button;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.annotation.Nullable;
@@ -27,7 +28,12 @@ import com.android.volley.RequestQueue;
 import com.android.volley.Response;
 import com.android.volley.VolleyError;
 import com.android.volley.toolbox.Volley;
+import com.example.rp.RP_DeleteRequest;
+import com.example.rp.RP_PaymentDetailRequest;
+import com.example.rp.RP_SavePKRequest;
+import com.example.asm.ASM_checkKeyPairExistence;
 
+import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
@@ -51,6 +57,9 @@ public class BiometricActivity extends AppCompatActivity {
     private BiometricPrompt.AuthenticationCallback authenticationCallback;
     private Button btn_auth;
     private Button btn_del;
+    private Button btn_card;
+    private TextView tv_product1, tv_amount1, tv_unitprice1, tv_totalprice1;
+    private TextView tv_product2, tv_amount2, tv_unitprice2, tv_totalprice2;
 
     private boolean start_authenticationIsClicked = false;
     private boolean delete_bioIsClicked = false;
@@ -69,6 +78,52 @@ public class BiometricActivity extends AppCompatActivity {
 
         btn_auth = findViewById(R.id.start_authentication);
         btn_del  = findViewById(R.id.delete_bio);
+        btn_card = findViewById(R.id.btn_card);
+
+        tv_product1 = findViewById(R.id.tv_product1);
+        tv_amount1 = findViewById(R.id.tv_amount1);
+        tv_unitprice1 = findViewById(R.id.tv_unitprice1);
+        tv_totalprice1 = findViewById(R.id.tv_totalprice1);
+        tv_product2 = findViewById(R.id.tv_product2);
+        tv_amount2 = findViewById(R.id.tv_amount2);
+        tv_unitprice2 = findViewById(R.id.tv_unitprice2);
+        tv_totalprice2 = findViewById(R.id.tv_totalprice2);
+
+        Response.Listener<String> responseListner = new Response.Listener<String>() {
+            @Override
+            public void onResponse(String response) {
+                try {
+                    //JSONObject jsonObject = new JSONObject(response);
+                    JSONArray jsonarray = new JSONArray(response);
+                    for(int i=0; i < jsonarray.length(); i++) {
+                        JSONObject jsonobject = jsonarray.getJSONObject(i);
+                        String product       = jsonobject.getString("product");
+                        String amount    = jsonobject.getString("amount");
+                        String unitPrice  = jsonobject.getString("unitPrice");
+                        String totalPrice = jsonobject.getString("totalPrice");
+                        if(i==0){
+                            tv_product1.setText(product);
+                            tv_amount1.setText(amount);
+                            tv_unitprice1.setText(unitPrice);
+                            tv_totalprice1.setText(totalPrice);
+                        }else
+                            tv_product2.setText(product);
+                            tv_amount2.setText(amount);
+                            tv_unitprice2.setText(unitPrice);
+                            tv_totalprice2.setText(totalPrice);
+                    }
+
+                } catch (JSONException e) {
+                    throw new RuntimeException(e);
+                }
+            }
+        };
+        RP_PaymentDetailRequest paymentDetailRequest = null;
+        paymentDetailRequest = new RP_PaymentDetailRequest(responseListner);
+        RequestQueue queue = Volley.newRequestQueue(BiometricActivity.this);
+        queue.add(paymentDetailRequest);
+
+
 
         authenticationCallback = new BiometricPrompt.AuthenticationCallback() {
 
@@ -86,17 +141,41 @@ public class BiometricActivity extends AppCompatActivity {
 
             @Override
             public void onAuthenticationSucceeded(BiometricPrompt.AuthenticationResult result) {
+                Intent intent = getIntent();
+                String userID = intent.getStringExtra("userID");
                 super.onAuthenticationSucceeded(result);
                 notifyUser("인증에 성공하였습니다");
 
                 if (start_authenticationIsClicked) {
-                    checkKeyPairExistence();
+                    ASM_checkKeyPairExistence checkkp = new ASM_checkKeyPairExistence();
+                    boolean iskeyEX = checkkp.ASM_checkkeypairexistence(userID);
                     // 공개키를 서버로 전송
+                    //RP_sendPublicKeyToServer(publicKey);
                     try {
-                        sendPublicKeyToServer(publicKey);
-                    } catch (CertificateException | IOException | KeyStoreException |
-                             NoSuchAlgorithmException | KeyManagementException e) {
+                        keyStore = KeyStore.getInstance("AndroidKeyStore");
+                    } catch (KeyStoreException e) {
                         throw new RuntimeException(e);
+                    }
+                    try {
+                        keyStore.load(null);
+                    } catch (CertificateException | IOException | NoSuchAlgorithmException e) {
+                        throw new RuntimeException(e);
+                    }
+                    KeyStore.PrivateKeyEntry privateKeyEntry = null;
+                    try {
+                        privateKeyEntry = (KeyStore.PrivateKeyEntry) keyStore.getEntry(userID, null);
+                    } catch (KeyStoreException | NoSuchAlgorithmException |
+                             UnrecoverableEntryException e) {
+                        throw new RuntimeException(e);
+                    }
+                    publicKey = privateKeyEntry.getCertificate().getPublicKey();
+                    if(iskeyEX){
+                        try {
+                            RP_sendpublickeytoserver(publicKey, userID);
+                        } catch (CertificateException | IOException | KeyStoreException |
+                                 NoSuchAlgorithmException | KeyManagementException e) {
+                            throw new RuntimeException(e);
+                        }
                     }
 
                 } else if (delete_bioIsClicked) {
@@ -107,7 +186,6 @@ public class BiometricActivity extends AppCompatActivity {
                         throw new RuntimeException(e);
                     }
                 }else{
-
                 }
             }
         };
@@ -171,6 +249,17 @@ public class BiometricActivity extends AppCompatActivity {
             }
         });
 
+        btn_card.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                Intent intent = getIntent();
+                String userID = intent.getStringExtra("userID");
+
+                intent = new Intent(BiometricActivity.this, CardEnrollActivity.class);
+                intent.putExtra("userID", userID);
+                startActivity(intent);
+            }
+        });
 
         btn_del.setOnClickListener(new View.OnClickListener() {
 
@@ -202,78 +291,9 @@ public class BiometricActivity extends AppCompatActivity {
 
     }
 
-    private void checkKeyPairExistence() {
-        Intent intent = getIntent();
-        String userID = intent.getStringExtra("userID");
 
-        try {
-            keyStore = KeyStore.getInstance("AndroidKeyStore");
-            keyStore.load(null);
+    public void RP_sendpublickeytoserver(PublicKey publicKey, String userID) throws CertificateException, IOException, KeyStoreException, NoSuchAlgorithmException, KeyManagementException {
 
-            if (keyStore.containsAlias(userID)) {
-                // 키 쌍이 존재함
-                KeyStore.PrivateKeyEntry privateKeyEntry = (KeyStore.PrivateKeyEntry) keyStore.getEntry(userID, null);
-                publicKey = privateKeyEntry.getCertificate().getPublicKey();
-                // 공개 키와 개인 키 출력
-                Log.d(TAG, "Public Key: " + Base64.encodeToString(publicKey.getEncoded(), Base64.NO_WRAP));
-                Toast.makeText(getApplicationContext(), "이미 저장된 생체정보입니다. ", Toast.LENGTH_SHORT).show();
-            } else {
-                // 키 쌍이 존재하지 않음
-                Log.d(TAG, "Key pair not found");
-                generateKeyPair();
-            }
-        } catch (NoSuchAlgorithmException | CertificateException | IOException | KeyStoreException | UnrecoverableEntryException e) {
-            e.printStackTrace();
-            Toast.makeText(getApplicationContext(), "키 저장소 오류: " + e.getMessage(), Toast.LENGTH_SHORT).show();
-        }
-    }
-
-
-
-    private void generateKeyPair() {
-        Intent intent = getIntent();
-        String userID = intent.getStringExtra("userID");
-        try {
-            keyStore = KeyStore.getInstance("AndroidKeyStore");
-            keyStore.load(null);
-
-            if (!keyStore.containsAlias(userID)) {
-                KeyPairGenerator keyPairGenerator = KeyPairGenerator.getInstance(KeyProperties.KEY_ALGORITHM_RSA, "AndroidKeyStore");
-                keyPairGenerator.initialize(new KeyGenParameterSpec.Builder(userID, KeyProperties.PURPOSE_SIGN)
-                        .setDigests(KeyProperties.DIGEST_SHA256)
-                        .setSignaturePaddings(KeyProperties.SIGNATURE_PADDING_RSA_PKCS1)
-                        .build());
-
-                KeyPair keyPair = keyPairGenerator.generateKeyPair();
-                publicKey = keyPair.getPublic();
-
-                KeyStore.PrivateKeyEntry privateKeyEntry = (KeyStore.PrivateKeyEntry) keyStore.getEntry(userID, null);
-                PrivateKey privateKey = privateKeyEntry.getPrivateKey();
-//                PrivateKey privateKey = keyPair.getPrivate();
-
-                // 공개키를 서버로 전송
-                sendPublicKeyToServer(publicKey);
-
-                Log.d(TAG, "공개키: " + Base64.encodeToString(publicKey.getEncoded(), Base64.NO_WRAP));
-            } else {
-                // 키 쌍이 이미 존재함
-                KeyStore.PrivateKeyEntry privateKeyEntry = (KeyStore.PrivateKeyEntry) keyStore.getEntry(userID, null);
-                publicKey = privateKeyEntry.getCertificate().getPublicKey();
-                // 공개 키와 개인 키 출력
-                Log.d(TAG, "Public Key: " + Base64.encodeToString(publicKey.getEncoded(), Base64.NO_WRAP));
-                Toast.makeText(getApplicationContext(), "이미 저장된 생체정보입니다. ", Toast.LENGTH_SHORT).show();
-            }
-        } catch (NoSuchAlgorithmException | NoSuchProviderException | InvalidAlgorithmParameterException | KeyStoreException | CertificateException | IOException | UnrecoverableEntryException e) {
-            e.printStackTrace();
-            Toast.makeText(getApplicationContext(), "키 생성 오류: " + e.getMessage(), Toast.LENGTH_SHORT).show();
-        } catch (KeyManagementException e) {
-            throw new RuntimeException(e);
-        }
-    }
-
-    private void sendPublicKeyToServer(PublicKey publicKey) throws CertificateException, IOException, KeyStoreException, NoSuchAlgorithmException, KeyManagementException {
-        Intent intent = getIntent();
-        String userID = intent.getStringExtra("userID");
 
         String publicKeyString = Base64.encodeToString(publicKey.getEncoded(), Base64.NO_WRAP);
 
@@ -301,7 +321,7 @@ public class BiometricActivity extends AppCompatActivity {
             }
         };
 
-        SavePKRequest savePKRequest = new SavePKRequest(publicKeyString, userID, responseListener, errorListener, BiometricActivity.this);
+        RP_SavePKRequest savePKRequest = new RP_SavePKRequest(publicKeyString, userID, responseListener, errorListener, BiometricActivity.this);
         RequestQueue queue = Volley.newRequestQueue(this);
         queue.add(savePKRequest);
     }
@@ -362,9 +382,9 @@ public class BiometricActivity extends AppCompatActivity {
                 }
             };
 
-            DeleteRequest deleteRequest;
+            RP_DeleteRequest deleteRequest;
             try {
-                deleteRequest = new DeleteRequest(userID, responseListener, BiometricActivity.this);
+                deleteRequest = new RP_DeleteRequest(userID, responseListener, BiometricActivity.this);
             } catch (CertificateException | IOException | KeyStoreException |
                      NoSuchAlgorithmException | KeyManagementException e) {
                 throw new RuntimeException(e);

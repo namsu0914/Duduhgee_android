@@ -13,6 +13,7 @@ import android.widget.Toast;
 import com.android.volley.RequestQueue;
 import com.android.volley.Response;
 import com.android.volley.toolbox.Volley;
+import com.example.rp.RP_LoginRequest;
 
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -84,9 +85,9 @@ public class LoginActivity extends AppCompatActivity {
                     }
                 };
                 //로그인 처리
-                LoginRequest loginRequest = null;
+                RP_LoginRequest loginRequest = null;
                 try {
-                    loginRequest = new LoginRequest(userID, userPass, responseListner, LoginActivity.this);
+                    loginRequest = new RP_LoginRequest(userID, userPass, responseListner, LoginActivity.this);
                 } catch (CertificateException | IOException | KeyStoreException |
                          NoSuchAlgorithmException | KeyManagementException e) {
                     throw new RuntimeException(e);

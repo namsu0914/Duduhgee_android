@@ -1,4 +1,4 @@
-package com.example.duduhgee;
+package com.example.rp;
 
 import android.content.Context;
 
@@ -7,6 +7,7 @@ import androidx.annotation.Nullable;
 import com.android.volley.AuthFailureError;
 import com.android.volley.Response;
 import com.android.volley.toolbox.StringRequest;
+import com.example.duduhgee.R;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -27,12 +28,12 @@ import javax.net.ssl.SSLSession;
 import javax.net.ssl.SSLSocketFactory;
 import javax.net.ssl.TrustManagerFactory;
 
-public class RegisterRequest extends StringRequest {
+public class RP_RegisterRequest extends StringRequest {
     //서버 URL 설정(php파일 연동)
     final static private String URL = "https://192.168.0.5:443/Register.php";
     private Map<String ,String > map;
 
-    public RegisterRequest(String userID, String userPassword, String userName, String userAge, Response.Listener<String> listener, Context context) throws CertificateException, IOException, KeyStoreException, NoSuchAlgorithmException, KeyManagementException {
+    public RP_RegisterRequest(String userID, String userPassword, String userName, String userAge, Response.Listener<String> listener, Context context) throws CertificateException, IOException, KeyStoreException, NoSuchAlgorithmException, KeyManagementException {
         super(Method.POST, URL, listener, null);
 
         SSLSocketFactory sslSocketFactory = getPinnedCertSslSocketFactory(context, R.raw.server);

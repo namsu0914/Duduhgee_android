@@ -36,7 +36,7 @@
 //        }
 //    }
 //}
-package com.example.duduhgee;
+package com.example.asm;
 
 import android.util.Base64;
 import android.util.Log;
@@ -50,7 +50,7 @@ import java.security.PrivateKey;
 import java.security.Signature;
 import java.security.SignatureException;
 
-public class SignatureActivity extends AppCompatActivity {
+public class ASM_SignatureActivity extends AppCompatActivity {
     private static final String TAG = "SignatureActivity";
     //private static final String KEY_NAME = "my_key";
 

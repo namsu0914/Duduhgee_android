@@ -24,6 +24,8 @@ import androidx.core.app.ActivityCompat;
 import com.android.volley.RequestQueue;
 import com.android.volley.Response;
 import com.android.volley.toolbox.Volley;
+import com.example.rp.RP_BuyActivity;
+import com.example.rp.RP_VerifyRequest;
 
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -67,7 +69,7 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void onClick(View v) {
                 // Start the new activity when the ImageView is clicked
-                Intent intent = new Intent(MainActivity.this, BuyActivity.class);
+                Intent intent = new Intent(MainActivity.this, RP_BuyActivity.class);
                 intent.putExtra("userID", userID);
                 startActivity(intent);
             }
@@ -118,7 +120,7 @@ public class MainActivity extends AppCompatActivity {
             }
         };
 
-        VerifyRequest verifyRequest = new VerifyRequest(userID, chall, Base64.encodeToString(signString, Base64.NO_WRAP), stringpublicKey, responseListener, MainActivity.this);
+        RP_VerifyRequest verifyRequest = new RP_VerifyRequest(userID, chall, Base64.encodeToString(signString, Base64.NO_WRAP), stringpublicKey, responseListener, MainActivity.this);
         RequestQueue queue = Volley.newRequestQueue(this);
         queue.add(verifyRequest);
     }

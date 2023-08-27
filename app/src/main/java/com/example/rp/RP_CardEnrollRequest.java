@@ -1,12 +1,15 @@
-package com.example.duduhgee;
+package com.example.rp;
 
-import static com.example.duduhgee.RegisterRequest.getPinnedCertSslSocketFactory;
+import static com.example.rp.RP_RegisterRequest.getPinnedCertSslSocketFactory;
 
 import android.content.Context;
+
+import androidx.annotation.Nullable;
 
 import com.android.volley.AuthFailureError;
 import com.android.volley.Response;
 import com.android.volley.toolbox.StringRequest;
+import com.example.duduhgee.R;
 
 import java.io.IOException;
 import java.security.KeyManagementException;
@@ -21,12 +24,11 @@ import javax.net.ssl.HttpsURLConnection;
 import javax.net.ssl.SSLSession;
 import javax.net.ssl.SSLSocketFactory;
 
-public class LoginRequest extends StringRequest {
-    //서버 URL 설정(php파일 연동)
-    final static private String URL = "https://192.168.0.5:443/Login.php";
-    private Map<String ,String >map;
+public class RP_CardEnrollRequest extends StringRequest {
+    final static private String URL = "https://192.168.0.5:443/RP_CardEnroll.php";
+    private Map<String ,String > map;
 
-    public LoginRequest(String userID, String userPassword, Response.Listener<String> listener, Context context) throws CertificateException, IOException, KeyStoreException, NoSuchAlgorithmException, KeyManagementException {
+    public RP_CardEnrollRequest(String userID, String c_num, String c_cvc, String c_date, String c_pw, Response.Listener<String> listener, Context context) throws CertificateException, IOException, KeyStoreException, NoSuchAlgorithmException, KeyManagementException {
         super(Method.POST, URL, listener, null);
 
         SSLSocketFactory sslSocketFactory = getPinnedCertSslSocketFactory(context, R.raw.server);
@@ -40,11 +42,17 @@ public class LoginRequest extends StringRequest {
 
         map= new HashMap<>();
         map.put("userID",userID);
-        map.put("userPassword", userPassword);
+        map.put("c_num",c_num);
+        map.put("c_cvc", c_cvc);
+        map.put("c_date", c_date);
+        map.put("c_pw", c_pw + "");
 
     }
+
+    @Nullable
     @Override
     protected Map<String, String> getParams() throws AuthFailureError {
         return map;
     }
+
 }
